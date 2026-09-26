@@ -1,205 +1,332 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Home, Warehouse, Radio, Settings, LineChartIcon, SlidersHorizontal, ChevronRight,
+  Thermometer, Droplet, Sun, Container, Cylinder, Wind, Bell, Zap, ArrowUp, ArrowDown, ArrowRight,
+  Leaf, Sprout, Flower2, Grape, Database, Clock, Cpu, Wifi, BatteryMedium,
+} from 'lucide-react';
+import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
 import { Leitura, StatusAtual, Alerta, Configuracao } from '@/lib/supabase';
-
-const PHASES: Record<string, { bg: string; opacity: number; label: string; icon: string; greet: string }> = {
-  night: { bg: 'radial-gradient(circle at 50% 0%, rgba(30,20,60,0.5), rgba(5,5,15,0.65))', opacity: 0.55, label: 'Noite', icon: '🌙', greet: 'Boa noite' },
-  dawn: { bg: 'radial-gradient(circle at 20% 10%, rgba(240,173,92,0.35), transparent 60%)', opacity: 0.4, label: 'Amanhecer', icon: '🌅', greet: 'Bom dia' },
-  day: { bg: 'radial-gradient(circle at 50% 0%, rgba(95,217,140,0.10), transparent 70%)', opacity: 0.22, label: 'Dia', icon: '☀️', greet: 'Bom dia' },
-  dusk: { bg: 'radial-gradient(circle at 80% 10%, rgba(167,140,224,0.35), rgba(240,109,92,0.15) 55%, transparent 75%)', opacity: 0.48, label: 'Entardecer', icon: '🌇', greet: 'Boa tarde' },
-};
-
-function phaseFor(h: number) {
-  if (h >= 5 && h < 8) return 'dawn';
-  if (h >= 8 && h < 17) return 'day';
-  if (h >= 17 && h < 20) return 'dusk';
-  return 'night';
-}
-
-function fmt(v: number | null | undefined, unit: string) {
-  return v === null || v === undefined ? '—' : `${v}${unit}`;
-}
+import { THEMES, getPeriod, greetingFor, regionHour, TZ, ThemeKey } from '@/lib/timeTheme';
 
 type Props = {
   leitura: Leitura | null;
+  historico: Leitura[];
   status: StatusAtual | null;
   alertas: Alerta[];
   config: Configuracao[];
 };
 
-export default function DashboardClient({ leitura, status, alertas, config }: Props) {
+function fmt(v: number | null | undefined, unit: string) {
+  return v === null || v === undefined ? '—' : `${v}${unit}`;
+}
+
+function series(historico: Leitura[], key: keyof Leitura) {
+  return historico.map((h, i) => ({ i, v: (h[key] as number) ?? null })).filter((p) => p.v !== null);
+}
+
+function Sparkline({ data, color }: { data: { i: number; v: number | null }[]; color: string }) {
+  if (data.length < 2) {
+    return <div style={{ height: 28, fontSize: 10.5, color: 'var(--muted)', display: 'flex', alignItems: 'center' }}>Aguardando histórico…</div>;
+  }
+  return (
+    <div style={{ height: 28, width: '100%' }}>
+      <ResponsiveContainer width="99%" height="100%">
+        <LineChart data={data}>
+          <Line type="monotone" dataKey="v" stroke={color} strokeWidth={1.6} dot={false} isAnimationActive={false} />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function MetricCard({ icon: Icon, label, value, unit, footer, color, spark }: {
+  icon: any; label: string; value: string; unit: string; footer?: string; color: string;
+  spark: { i: number; v: number | null }[];
+}) {
+  return (
+    <div className="metric-card">
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+        <div className="metric-icon" style={{ color, background: `${color}18`, borderColor: `${color}33` }}>
+          <Icon size={18} strokeWidth={1.6} />
+        </div>
+        <div style={{ fontSize: 12.5, paddingTop: 2 }}>{label}</div>
+      </div>
+      <div style={{ marginTop: 10, fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 500 }}>
+        {value}<span style={{ fontSize: 13, fontWeight: 400, marginLeft: 3, color: 'var(--muted)' }}>{unit}</span>
+      </div>
+      <div style={{ marginTop: 6 }}><Sparkline data={spark} color={color} /></div>
+      {footer && <div style={{ marginTop: 4, fontSize: 10.5, color: 'var(--muted)', textAlign: 'right' }}>{footer}</div>}
+    </div>
+  );
+}
+
+export default function DashboardClient({ leitura, historico, status, alertas, config }: Props) {
+  const [periodKey, setPeriodKey] = useState<ThemeKey>('day');
   const [clock, setClock] = useState('');
-  const [phaseKey, setPhaseKey] = useState('day');
-  const [greeting, setGreeting] = useState('Bom dia, Equipe Uvaí');
+  const [greeting, setGreeting] = useState('Bom dia');
+  const [showAllAlerts, setShowAllAlerts] = useState(false);
 
   useEffect(() => {
     function tick() {
       const now = new Date();
-      const key = phaseFor(now.getHours());
-      setPhaseKey(key);
-      setClock(now.toLocaleDateString('pt-BR') + ' · ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
-      setGreeting(PHASES[key].greet + ', Equipe Uvaí');
+      const h = regionHour(now);
+      setPeriodKey(getPeriod(h));
+      setGreeting(greetingFor(h));
+      setClock(
+        now.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', timeZone: TZ }) +
+        ' · ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: TZ })
+      );
     }
     tick();
     const id = setInterval(tick, 30000);
     return () => clearInterval(id);
   }, []);
 
-  const phase = PHASES[phaseKey];
+  const t = THEMES[periodKey];
+  const vars = {
+    '--bg': t.bg, '--panel': t.panel, '--card': t.card, '--border': t.border,
+    '--text': t.text, '--muted': t.muted, '--accent': t.accent,
+  } as React.CSSProperties;
+
+  const cfg = (chave: string) => config.find((c) => c.chave === chave)?.valor;
   const criticalAlert = alertas.find((a) => a.nivel === 'crit');
   const warnAlert = alertas.find((a) => a.nivel === 'warn');
   const bannerAlert = criticalAlert ?? warnAlert;
   const reservatorioBaixo = (leitura?.nivel_reservatorio ?? 100) < 25;
-  const cfg = (chave: string) => config.find((c) => c.chave === chave)?.valor;
+
+  const spTemp = useMemo(() => series(historico, 'temperatura'), [historico]);
+  const spSolo = useMemo(() => series(historico, 'umidade_solo'), [historico]);
+  const spLum = useMemo(() => series(historico, 'luminosidade'), [historico]);
+  const spReserv = useMemo(() => series(historico, 'nivel_reservatorio'), [historico]);
+  const spCaixa = useMemo(() => series(historico, 'nivel_caixa_elevada'), [historico]);
+  const spVento = useMemo(() => series(historico, 'velocidade_vento'), [historico]);
+
+  const NAV = [
+    { label: 'Visão Geral', Icon: Home },
+    { label: 'Estufa', Icon: Warehouse },
+    { label: 'Sensores', Icon: Radio },
+    { label: 'Atuadores', Icon: Settings },
+    { label: 'Histórico', Icon: LineChartIcon },
+    { label: 'Configurações', Icon: SlidersHorizontal },
+  ];
 
   return (
-    <div className="app">
-      <div id="skyOverlay" style={{ background: phase.bg, opacity: phase.opacity }} />
-
-      <aside className="sidebar">
-        <div>
-          <div className="brand">
-            <div className="mark">U</div>
-            <div>
-              <div className="name">UVAÍ</div>
-              <div className="sub">TECNOLOGIA PARA VINHEDOS</div>
-            </div>
-          </div>
-          <nav className="side-nav">
-            <a className="active"><span className="ic">⌂</span> Visão Geral</a>
-            <a><span className="ic">▦</span> Estufa</a>
-            <a><span className="ic">◎</span> Sensores</a>
-            <a><span className="ic">⚙</span> Atuadores</a>
-            <a><span className="ic">↗</span> Histórico</a>
-            <a><span className="ic">☰</span> Configurações</a>
-          </nav>
-        </div>
-        <div className="side-footer">
-          <div className="loc-card">
-            <div className="place">Serra de São Bento - RN</div>
-            <div className="phase">{phase.icon} {phase.label}</div>
-          </div>
-          <div className="copyright">UVAÍ © 2026<br />Vinhedos Inteligentes</div>
-        </div>
-      </aside>
-
-      <main className="main">
-        <div className="topline">
+    <div style={{ ...vars, background: t.bg, color: t.text, minHeight: '100vh', transition: 'background-color 1s, color 1s' }}>
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', background: t.glow, transition: 'background 1s' }} />
+      <div className="uvai-root">
+        <aside className="sidebar" style={{ background: t.panel, borderColor: t.border }}>
           <div>
-            <div className="greeting">{greeting}</div>
-            <div className="sub">
-              {leitura ? 'Tudo funcionando normalmente na estufa.' : 'Aguardando a primeira leitura do ESP32.'}
-            </div>
-          </div>
-          <div className="topline-right">
-            <div className="status-pill">
-              <span className="dot" style={{ background: leitura ? 'var(--grow)' : 'var(--text-faint)' }} />
-              {leitura ? 'Sistema Online' : 'Sem dados ainda'}
-            </div>
-            <div className="clock-chip">{clock}</div>
-          </div>
-        </div>
-
-        {bannerAlert && (
-          <div className={`banner ${bannerAlert.nivel === 'crit' ? 'crit' : ''}`}>
-            <span className="b-dot" />
-            <div>
-              <div className="b-title">{bannerAlert.titulo}</div>
-              <div className="b-desc">{bannerAlert.descricao}</div>
-            </div>
-          </div>
-        )}
-
-        <div className="row-top">
-          <div className="card">
-            <h2>Condições Atuais da Estufa <span className="n">tabela leituras</span></h2>
-            <div className="sensor-grid">
-              <div className={`sensor ${!leitura ? 'empty' : ''}`}>
-                <div className="top"><div className="s-icon" style={{ color: 'var(--grow)' }}>🌡️</div><div className="label">Temperatura</div></div>
-                <div className="val">{fmt(leitura?.temperatura, '°C')}</div>
-                {cfg('temp_maxima') && <div style={{ fontSize: 10.5, color: 'var(--text-faint)', marginTop: 5 }}>Máx. configurado: {cfg('temp_maxima')}°C</div>}
-              </div>
-              <div className={`sensor ${!leitura ? 'empty' : ''}`}>
-                <div className="top"><div className="s-icon" style={{ color: 'var(--blue)' }}>💧</div><div className="label">Umidade do Solo</div></div>
-                <div className="val">{fmt(leitura?.umidade_solo, '%')}</div>
-                {cfg('umidade_minima') && <div style={{ fontSize: 10.5, color: 'var(--text-faint)', marginTop: 5 }}>Mín. configurado: {cfg('umidade_minima')}%</div>}
-              </div>
-              <div className={`sensor ${!leitura ? 'empty' : ''}`}>
-                <div className="top"><div className="s-icon" style={{ color: 'var(--grape)' }}>☀️</div><div className="label">Luminosidade</div></div>
-                <div className="val">{fmt(leitura?.luminosidade, '%')}</div>
-              </div>
-              <div className={`sensor ${!leitura ? 'empty' : ''} ${reservatorioBaixo ? 'warn' : ''}`}>
-                <div className="top"><div className="s-icon" style={{ color: 'var(--blue)' }}>🛢️</div><div className="label">Nível do Reservatório</div></div>
-                <div className="val">{fmt(leitura?.nivel_reservatorio, '%')}</div>
-              </div>
-              <div className={`sensor ${!leitura ? 'empty' : ''}`}>
-                <div className="top"><div className="s-icon" style={{ color: 'var(--blue)' }}>🚰</div><div className="label">Caixa Elevada</div></div>
-                <div className="val">{fmt(leitura?.nivel_caixa_elevada, '%')}</div>
-              </div>
-              <div className={`sensor ${!leitura ? 'empty' : ''}`}>
-                <div className="top"><div className="s-icon" style={{ color: '#C9D6CF' }}>🍃</div><div className="label">Vento</div></div>
-                <div className="val">{fmt(leitura?.velocidade_vento, ' km/h')}</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="hero-card">
-            <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMax slice" style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
-              <defs>
-                <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#3A2F52" /><stop offset="45%" stopColor="#6B4A5C" /><stop offset="75%" stopColor="#D98A5E" /><stop offset="100%" stopColor="#1A140F" />
-                </linearGradient>
-              </defs>
-              <rect width="400" height="300" fill="url(#skyGrad)" />
-              <circle cx="320" cy="70" r="26" fill="#F3C089" opacity="0.85" />
-              <path d="M0 210 L60 175 L120 200 L180 165 L240 195 L300 160 L400 190 L400 300 L0 300 Z" fill="#141A12" opacity="0.9" />
-              <g stroke="#0C120D" strokeWidth={2} fill="rgba(210,235,220,0.06)">
-                <polygon points="70,300 70,190 200,150 330,190 330,300" />
-              </g>
-            </svg>
-            <div className="tag"><span className="dot" /> {status ? 'Operando' : 'Aguardando status'}</div>
-            <h3>Estufa 01</h3>
-            <div className="loc">Serra de São Bento · RN</div>
-            <div className="hero-desc">Ambiente controlado para máximo desenvolvimento das uvas.</div>
-          </div>
-        </div>
-
-        <div className="row-bottom">
-          <div className="card">
-            <h2>Status dos Atuadores <span className="n">status_atual</span></h2>
-            {status ? (
+            <div className="brand">
+              <svg width="34" height="27" viewBox="0 0 70 56" fill="none">
+                <path d="M35 50C22 46 10 36 8 18c12 2 22 12 27 32Z" stroke={t.text} strokeWidth="1.4" opacity=".85" />
+                <path d="M35 50c13-4 25-14 27-32-12 2-22 12-27 32Z" stroke={t.text} strokeWidth="1.4" opacity=".85" />
+                <path d="M35 4c4 6 5 10 0 16-5-6-4-10 0-16Z" fill={t.purple} />
+              </svg>
               <div>
-                <div className="actuator"><div><div className="name">Bomba de Irrigação</div><div className="sub">{status.bomba ? 'ATIVA' : 'DESLIGADA'}</div></div><div className={`toggle ${status.bomba ? 'on' : 'off'}`}><i /></div></div>
-                <div className="actuator"><div><div className="name">Válvula de Gotejamento</div><div className="sub">{status.valvula_aberta_pct}% aberta</div></div><div className={`toggle ${status.valvula_aberta_pct > 0 ? 'on' : 'off'}`}><i /></div></div>
-                <div className="actuator"><div><div className="name">Ventilador</div><div className="sub">{status.ventilador ? 'LIGADO' : 'DESLIGADO'}</div></div><div className={`toggle ${status.ventilador ? 'on' : 'off'}`}><i /></div></div>
-                <div className="actuator"><div><div className="name">LED (Fotoperíodo)</div><div className="sub">{status.led ? 'LIGADO' : 'DESLIGADO'}</div></div><div className={`toggle ${status.led ? 'on' : 'off'}`}><i /></div></div>
+                <div className="brand-name">UVAÍ</div>
+                <div className="brand-sub">TECNOLOGIA PARA VINHEDOS</div>
               </div>
-            ) : (
-              <div className="empty-alert">Nenhum status registrado ainda.</div>
-            )}
+            </div>
+            <nav className="side-nav">
+              {NAV.map(({ label, Icon }, i) => (
+                <a key={label} style={i === 0 ? { background: t.accentSoft, color: t.text, borderColor: t.border } : { color: t.muted }}>
+                  <Icon size={17} strokeWidth={1.6} style={i === 0 ? { color: t.accent } : undefined} /> {label}
+                </a>
+              ))}
+            </nav>
           </div>
-
-          <div className="card">
-            <h2>Alertas e Eventos <span className="n">{alertas.length} ativos</span></h2>
-            {alertas.length === 0 ? (
-              <div className="empty-alert">Nenhum alerta ativo agora.</div>
-            ) : (
-              alertas.map((a) => (
-                <div key={a.id} className={`alert ${a.nivel}`}>
-                  <span className="dot" />
-                  <div>
-                    <div className="t">{a.titulo}</div>
-                    <div className="s">{a.descricao}</div>
-                  </div>
+          <div>
+            <div className="weather-card" style={{ borderColor: t.border, background: t.card }}>
+              <div style={{ padding: 12 }}>
+                <div style={{ fontWeight: 500, fontSize: 12.5, marginBottom: 6 }}>Serra de São Bento - RN</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: t.muted }}>
+                  <span>{t.icon}</span><span style={{ fontWeight: 500, color: t.text }}>{t.weather.temp}</span><span>{t.weather.desc}</span>
                 </div>
-              ))
-            )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 11, color: t.muted }}>
+                  Condições externas <ChevronRight size={13} />
+                </div>
+              </div>
+            </div>
+            <div style={{ marginTop: 14, fontSize: 10.5, color: t.muted, lineHeight: 1.6 }}>UVAÍ © 2026<br />Vinhedos Inteligentes</div>
           </div>
-        </div>
+        </aside>
 
-        <footer className="footer-wrap">Uvaí · Estufa inteligente para vinícola — Projeto PEITD, BTI/IMD/UFRN</footer>
-      </main>
+        <main className="main">
+          <header className="topbar" style={{ background: t.panel, borderColor: t.border }}>
+            <div>
+              <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 500 }}>{greeting}, Equipe Uvaí</h1>
+              <p style={{ fontSize: 13, color: t.muted, marginTop: 3 }}>
+                {leitura ? 'Tudo funcionando normalmente na estufa.' : 'Aguardando a primeira leitura do ESP32.'}
+              </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 12.5 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: leitura ? t.accent : t.muted }}>
+                <span style={{ width: 7, height: 7, borderRadius: 99, background: leitura ? t.accent : t.muted }} />
+                {leitura ? 'Sistema Online' : 'Sem dados ainda'}
+              </span>
+              <span style={{ color: t.muted }}>{clock}</span>
+              <div style={{ position: 'relative' }}><Bell size={16} style={{ color: t.muted }} /></div>
+              <div style={{ width: 32, height: 32, borderRadius: 99, display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 600, border: `1px solid ${t.border}`, background: t.card }}>UV</div>
+            </div>
+          </header>
+
+          {bannerAlert && (
+            <div className="banner" style={{ borderColor: t.border, background: t.card, borderLeftColor: bannerAlert.nivel === 'crit' ? '#f0687e' : t.amber }}>
+              <span style={{ width: 8, height: 8, borderRadius: 99, marginTop: 5, background: bannerAlert.nivel === 'crit' ? '#f0687e' : t.amber, flexShrink: 0 }} />
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 500 }}>{bannerAlert.titulo}</div>
+                <div style={{ fontSize: 12.5, color: t.muted, marginTop: 3 }}>{bannerAlert.descricao}</div>
+              </div>
+            </div>
+          )}
+
+          <section className="row-top">
+            <div className="panel" style={{ background: t.panel, borderColor: t.border }}>
+              <h2 className="panel-title">Condições Atuais da Estufa</h2>
+              <div className="metric-grid">
+                <MetricCard icon={Thermometer} label="Temperatura" value={fmt(leitura?.temperatura, '')} unit="°C" color={t.accent} spark={spTemp} footer={cfg('temp_maxima') ? `Máx: ${cfg('temp_maxima')}°C` : undefined} />
+                <MetricCard icon={Droplet} label="Umidade do Solo" value={fmt(leitura?.umidade_solo, '')} unit="%" color={t.blue} spark={spSolo} footer={cfg('umidade_minima') ? `Mín: ${cfg('umidade_minima')}%` : undefined} />
+                <MetricCard icon={Sun} label="Luminosidade" value={fmt(leitura?.luminosidade, '')} unit="%" color={t.purple} spark={spLum} />
+                <MetricCard icon={Container} label="Nível do Reservatório" value={fmt(leitura?.nivel_reservatorio, '')} unit="%" color={reservatorioBaixo ? '#f0ad5c' : t.blue} spark={spReserv} footer="Capacidade: 1.000 L" />
+                <MetricCard icon={Cylinder} label="Caixa Elevada" value={fmt(leitura?.nivel_caixa_elevada, '')} unit="%" color={t.blue} spark={spCaixa} footer="Capacidade: 500 L" />
+                <MetricCard icon={Wind} label="Vento" value={fmt(leitura?.velocidade_vento, '')} unit="km/h" color={t.text} spark={spVento} footer="Limite: 40 km/h" />
+              </div>
+            </div>
+
+            <div className="hero-card" style={{ borderColor: t.border }}>
+              <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMax slice" style={{ position: 'absolute', inset: 0 }}>
+                <defs>
+                  <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+                    {t.dark ? (<>
+                      <stop offset="0%" stopColor="#3A2F52" /><stop offset="45%" stopColor="#6B4A5C" />
+                      <stop offset="75%" stopColor="#D98A5E" /><stop offset="100%" stopColor="#1A140F" />
+                    </>) : (<>
+                      <stop offset="0%" stopColor="#bfe3f7" /><stop offset="60%" stopColor="#e7f3ec" />
+                      <stop offset="100%" stopColor="#cdeede" />
+                    </>)}
+                  </linearGradient>
+                </defs>
+                <rect width="400" height="300" fill="url(#skyGrad)" />
+                <circle cx="320" cy="70" r="26" fill={t.dark ? '#F3C089' : '#FFE6A0'} opacity="0.9" />
+                <path d="M0 210 L60 175 L120 200 L180 165 L240 195 L300 160 L400 190 L400 300 L0 300 Z" fill={t.dark ? '#141A12' : '#8fbf9e'} opacity="0.9" />
+                <polygon points="70,300 70,190 200,150 330,190 330,300" fill="rgba(210,235,220,0.08)" stroke="#0C120D" strokeWidth="2" />
+              </svg>
+              <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%', padding: 20, color: '#fff' }}>
+                <div>
+                  <div style={{ fontSize: 11.5, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, color: '#7EEBB0' }}>
+                    <span style={{ width: 6, height: 6, borderRadius: 99, background: '#7EEBB0' }} /> {status ? 'Operando' : 'Aguardando status'}
+                  </div>
+                  <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 21, marginTop: 6 }}>Estufa 01</h3>
+                  <div style={{ fontSize: 11, opacity: 0.85, marginTop: 2 }}>Serra de São Bento · RN</div>
+                </div>
+                <p style={{ fontSize: 12, opacity: 0.85, maxWidth: 220, lineHeight: 1.5 }}>Ambiente controlado para máximo desenvolvimento das uvas.</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="row-mid">
+            <div className="panel" style={{ background: t.panel, borderColor: t.border }}>
+              <h2 className="panel-title">Status dos Atuadores</h2>
+              {status ? (
+                <div>
+                  {[
+                    { name: 'Bomba de Irrigação', on: status.bomba, onTxt: 'ATIVA', offTxt: 'DESLIGADA' },
+                    { name: 'Válvula de Gotejamento', on: status.valvula_aberta_pct > 0, onTxt: `${status.valvula_aberta_pct}% aberta`, offTxt: 'FECHADA' },
+                    { name: 'Ventilador', on: status.ventilador, onTxt: 'LIGADO', offTxt: 'DESLIGADO' },
+                    { name: 'LED (Fotoperíodo)', on: status.led, onTxt: 'LIGADO', offTxt: 'DESLIGADO' },
+                  ].map((a) => (
+                    <div key={a.name} className="actuator-row" style={{ borderColor: t.border }}>
+                      <div>
+                        <div style={{ fontSize: 13 }}>{a.name}</div>
+                        <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: 0.4, marginTop: 2, color: a.on ? t.accent : t.muted }}>{a.on ? a.onTxt : a.offTxt}</div>
+                      </div>
+                      <div className={`switch ${a.on ? 'on' : 'off'}`} style={{ background: a.on ? t.accent : t.border }}><i /></div>
+                    </div>
+                  ))}
+                </div>
+              ) : <div className="empty">Nenhum status registrado ainda.</div>}
+            </div>
+
+            <div className="panel" style={{ background: t.panel, borderColor: t.border }}>
+              <h2 className="panel-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Zap size={15} style={{ color: t.accent }} /> Consumo de Energia</h2>
+              <div style={{ fontSize: 10.5, color: t.muted, marginBottom: 4 }}>Estimativa ilustrativa — sensor de potência ainda não integrado</div>
+              <div style={{ height: 90 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={[60,52,58,64,72,80,76,88,95,84,90,78,70,66,74,62,68,58,64,55].map((w,i)=>({h:i,w}))}>
+                    <defs><linearGradient id="egrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={t.accent} stopOpacity={0.35}/><stop offset="100%" stopColor={t.accent} stopOpacity={0}/></linearGradient></defs>
+                    <CartesianGrid stroke={t.grid} vertical={false} />
+                    <YAxis hide domain={[0,120]} />
+                    <Area type="monotone" dataKey="w" stroke={t.accent} strokeWidth={1.6} fill="url(#egrad)" isAnimationActive={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="panel" style={{ background: t.panel, borderColor: t.border }}>
+              <h2 className="panel-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Bell size={15} /> Alertas e Eventos <span style={{ marginLeft: 'auto', fontSize: 11, color: t.muted, fontWeight: 400 }}>{alertas.length} ativos</span></h2>
+              {alertas.length === 0 ? <div className="empty">Nenhum alerta ativo agora.</div> : (
+                <>
+                  {(showAllAlerts ? alertas : alertas.slice(0, 5)).map((a) => (
+                    <div key={a.id} className="alert-row" style={{ borderColor: t.border }}>
+                      <span style={{ width: 7, height: 7, borderRadius: 99, marginTop: 5, flexShrink: 0, background: a.nivel === 'crit' ? '#f0687e' : a.nivel === 'warn' ? t.amber : a.nivel === 'info' ? t.blue : t.accent }} />
+                      <div>
+                        <div style={{ fontSize: 12.5 }}>{a.titulo}</div>
+                        <div style={{ fontSize: 11, color: t.muted, marginTop: 2 }}>{a.descricao}</div>
+                      </div>
+                    </div>
+                  ))}
+                  {alertas.length > 5 && (
+                    <button onClick={() => setShowAllAlerts(!showAllAlerts)} style={{ background: 'none', border: 'none', color: t.muted, fontSize: 11, marginTop: 8, cursor: 'pointer' }}>
+                      {showAllAlerts ? 'Ver menos' : 'Ver todos'}
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </section>
+
+          <section className="row-bottom">
+            <div className="panel" style={{ background: t.panel, borderColor: t.border }}>
+              <h2 className="panel-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Leaf size={15} style={{ color: t.accent }} /> Crescimento das Plantas</h2>
+              <div className="stage-grid">
+                {[
+                  { label: 'Germinação', days: 'Dia 1–7', Icon: Sprout, pct: 100, color: t.accent },
+                  { label: 'Desenvolvimento', days: 'Dia 8–20', Icon: Leaf, pct: 45, color: t.accent },
+                  { label: 'Floração', days: 'Dia 21–35', Icon: Flower2, pct: 10, color: t.purple },
+                  { label: 'Frutificação', days: 'Dia 36+', Icon: Grape, pct: 0, color: t.purple },
+                ].map((s) => (
+                  <div key={s.label} className="stage" style={{ borderColor: t.border, background: t.card }}>
+                    <s.Icon size={20} strokeWidth={1.4} style={{ color: s.color, margin: '0 auto' }} />
+                    <div style={{ fontSize: 11, marginTop: 8 }}>{s.label}</div>
+                    <div style={{ fontSize: 10, color: t.muted }}>{s.days}</div>
+                    <div className="bar" style={{ background: t.border }}><i style={{ width: `${s.pct}%`, background: s.color }} /></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="panel" style={{ background: t.panel, borderColor: t.border }}>
+              <h2 className="panel-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Database size={15} /> Dados do Sistema</h2>
+              {[
+                { Icon: Clock, label: 'Última leitura', value: leitura ? new Date(leitura.criado_em).toLocaleString('pt-BR', { timeZone: TZ }) : '—' },
+                { Icon: Cpu, label: 'ESP32', value: leitura ? 'Conectado' : 'Aguardando' },
+                { Icon: Wifi, label: 'Wi-Fi', value: leitura ? 'Sinal forte' : '—' },
+              ].map((r) => (
+                <div key={r.label} className="sys-row" style={{ borderColor: t.border }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8, color: t.muted }}><r.Icon size={14} /> {r.label}</span>
+                  <span style={{ color: r.value === '—' ? t.muted : t.accent }}>{r.value}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <footer style={{ textAlign: 'center', marginTop: 26, fontSize: 11, color: t.muted }}>
+            Uvaí · Estufa inteligente para vinícola — Projeto PEITD, BTI/IMD/UFRN
+          </footer>
+        </main>
+      </div>
     </div>
   );
 }

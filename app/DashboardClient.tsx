@@ -63,7 +63,7 @@ function MetricCard({ icon: Icon, label, value, unit, footer, color, spark }: {
 }
 
 export default function DashboardClient({ leitura, historico, status, alertas, config }: Props) {
-  const [periodKey, setPeriodKey] = useState<ThemeKey>('day');
+  const [periodKey, setPeriodKey] = useState<ThemeKey>('tarde');
   const [clock, setClock] = useState('');
   const [greeting, setGreeting] = useState('Bom dia');
   const [showAllAlerts, setShowAllAlerts] = useState(false);
@@ -196,23 +196,8 @@ export default function DashboardClient({ leitura, historico, status, alertas, c
             </div>
 
             <div className="hero-card" style={{ borderColor: t.border }}>
-              <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMax slice" style={{ position: 'absolute', inset: 0 }}>
-                <defs>
-                  <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
-                    {t.dark ? (<>
-                      <stop offset="0%" stopColor="#3A2F52" /><stop offset="45%" stopColor="#6B4A5C" />
-                      <stop offset="75%" stopColor="#D98A5E" /><stop offset="100%" stopColor="#1A140F" />
-                    </>) : (<>
-                      <stop offset="0%" stopColor="#bfe3f7" /><stop offset="60%" stopColor="#e7f3ec" />
-                      <stop offset="100%" stopColor="#cdeede" />
-                    </>)}
-                  </linearGradient>
-                </defs>
-                <rect width="400" height="300" fill="url(#skyGrad)" />
-                <circle cx="320" cy="70" r="26" fill={t.dark ? '#F3C089' : '#FFE6A0'} opacity="0.9" />
-                <path d="M0 210 L60 175 L120 200 L180 165 L240 195 L300 160 L400 190 L400 300 L0 300 Z" fill={t.dark ? '#141A12' : '#8fbf9e'} opacity="0.9" />
-                <polygon points="70,300 70,190 200,150 330,190 330,300" fill="rgba(210,235,220,0.08)" stroke="#0C120D" strokeWidth="2" />
-              </svg>
+              <img src={t.hero} alt="Estufa 01" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.05) 35%, rgba(0,0,0,0.55) 100%)' }} />
               <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%', padding: 20, color: '#fff' }}>
                 <div>
                   <div style={{ fontSize: 11.5, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, color: '#7EEBB0' }}>

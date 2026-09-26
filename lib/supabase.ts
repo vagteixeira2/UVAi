@@ -1,0 +1,42 @@
+import { createClient } from '@supabase/supabase-js';
+
+export const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
+);
+
+export type Leitura = {
+  id: number;
+  criado_em: string;
+  temperatura: number | null;
+  umidade_solo: number | null;
+  umidade_ar: number | null;
+  luminosidade: number | null;
+  nivel_reservatorio: number | null;
+  nivel_caixa_elevada: number | null;
+  velocidade_vento: number | null;
+};
+
+export type StatusAtual = {
+  id: number;
+  atualizado_em: string;
+  bomba: boolean;
+  valvula_aberta_pct: number;
+  ventilador: boolean;
+  led: boolean;
+};
+
+export type Alerta = {
+  id: number;
+  criado_em: string;
+  nivel: 'info' | 'ok' | 'warn' | 'crit';
+  titulo: string;
+  descricao: string | null;
+  resolvido: boolean;
+};
+
+export type Configuracao = {
+  chave: string;
+  valor: number;
+  descricao: string | null;
+};

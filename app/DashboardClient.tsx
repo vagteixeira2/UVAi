@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
 import { Leitura, StatusAtual, Alerta, Configuracao } from '@/lib/supabase';
-import { THEMES, getPeriod, greetingFor, regionHour, TZ, ThemeKey } from '@/lib/timeTheme';
+import { THEMES, getPeriod, greetingFor, regionMinutes, TZ, ThemeKey } from '@/lib/timeTheme';
 
 type Props = {
   leitura: Leitura | null;
@@ -71,9 +71,9 @@ export default function DashboardClient({ leitura, historico, status, alertas, c
   useEffect(() => {
     function tick() {
       const now = new Date();
-      const h = regionHour(now);
-      setPeriodKey(getPeriod(h));
-      setGreeting(greetingFor(h));
+      const mins = regionMinutes(now);
+      setPeriodKey(getPeriod(mins));
+      setGreeting(greetingFor(mins));
       setClock(
         now.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', timeZone: TZ }) +
         ' · ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: TZ })

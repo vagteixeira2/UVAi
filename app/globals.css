@@ -46,7 +46,7 @@ a{color:inherit; text-decoration:none; cursor:pointer;}
 
 .actuator-row{display:flex; align-items:center; justify-content:space-between; padding:10px 2px; border-bottom:1px solid;}
 .actuator-row:last-child{border-bottom:none;}
-.switch{width:36px; height:20px; border-radius:20px; position:relative; flex-shrink:0;}
+.switch{width:36px; height:20px; border-radius:20px; position:relative; flex-shrink:0; padding:0; outline:none;}
 .switch i{position:absolute; top:2px; width:16px; height:16px; border-radius:50%; background:#fff; transition:left .2s;}
 .switch.on i{left:18px;} .switch.off i{left:2px;}
 

@@ -44,6 +44,31 @@ Content-Type: application/json
 
 O painel busca sempre a leitura mais recente — não precisa mudar nada no front-end.
 
+## Controlando atuadores pelo dashboard
+
+O dashboard agora tem botões reais (bomba, válvula, ventilador, LED). Como o
+ESP32 não fica com um servidor esperando conexão, o fluxo é por fila de
+comandos — o ESP32 pergunta periodicamente se tem algo pra fazer:
+
+**1. Consultar comandos pendentes** (o ESP32 chama isso a cada poucos segundos):
+```
+GET /api/comandos
+```
+Resposta: `{ "ok": true, "comandos": [{ "id": 12, "alvo": "bomba", "ligado": true, ... }] }`
+
+**2. Depois de executar fisicamente, confirmar:**
+```
+POST /api/comandos/confirmar
+Content-Type: application/json
+
+{ "id": 12, "alvo": "bomba", "ligado": true }
+```
+
+Isso marca o comando como executado e atualiza `status_atual`, que é o que o
+dashboard exibe. Enquanto o ESP32 não confirma, o botão fica com "Aguardando
+ESP32…" em vez de mudar de estado — o dashboard nunca finge que algo já
+aconteceu fisicamente antes de ser confirmado.
+
 **Nota de segurança:** as políticas de inserção do banco estão abertas (qualquer
 requisição pode gravar uma leitura), o que é aceitável para o escopo do projeto
 escolar. Se for além disso, vale trocar por uma chave compartilhada simples no

@@ -7,7 +7,8 @@ import {
   Leaf, Sprout, Flower2, Grape, Database, Clock, Cpu, Wifi, BatteryMedium,
 } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
-import { Leitura, StatusAtual, Alerta, Configuracao } from '@/lib/supabase';
+import { Leitura, StatusAtual, Alerta, Configuracao, Comando } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
 import { THEMES, getPeriod, greetingFor, regionMinutes, TZ, ThemeKey } from '@/lib/timeTheme';
 
 type Props = {
@@ -16,6 +17,7 @@ type Props = {
   status: StatusAtual | null;
   alertas: Alerta[];
   config: Configuracao[];
+  comandosPendentes: Comando[];
 };
 
 function fmt(v: number | null | undefined, unit: string) {
@@ -62,11 +64,31 @@ function MetricCard({ icon: Icon, label, value, unit, footer, color, spark }: {
   );
 }
 
-export default function DashboardClient({ leitura, historico, status, alertas, config }: Props) {
+export default function DashboardClient({ leitura, historico, status, alertas, config, comandosPendentes }: Props) {
+  const router = useRouter();
   const [periodKey, setPeriodKey] = useState<ThemeKey>('tarde');
   const [clock, setClock] = useState('');
   const [greeting, setGreeting] = useState('Bom dia');
   const [showAllAlerts, setShowAllAlerts] = useState(false);
+  const [enviando, setEnviando] = useState<string | null>(null);
+
+  async function acionar(alvo: 'bomba' | 'valvula' | 'ventilador' | 'led', ligadoAtual: boolean) {
+    setEnviando(alvo);
+    try {
+      await fetch('/api/comandos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alvo, ligado: !ligadoAtual }),
+      });
+      router.refresh();
+    } finally {
+      setEnviando(null);
+    }
+  }
+
+  function pendente(alvo: string) {
+    return comandosPendentes.find((c) => c.alvo === alvo);
+  }
 
   useEffect(() => {
     function tick() {
@@ -217,19 +239,30 @@ export default function DashboardClient({ leitura, historico, status, alertas, c
               {status ? (
                 <div>
                   {[
-                    { name: 'Bomba de Irrigação', on: status.bomba, onTxt: 'ATIVA', offTxt: 'DESLIGADA' },
-                    { name: 'Válvula de Gotejamento', on: status.valvula_aberta_pct > 0, onTxt: `${status.valvula_aberta_pct}% aberta`, offTxt: 'FECHADA' },
-                    { name: 'Ventilador', on: status.ventilador, onTxt: 'LIGADO', offTxt: 'DESLIGADO' },
-                    { name: 'LED (Fotoperíodo)', on: status.led, onTxt: 'LIGADO', offTxt: 'DESLIGADO' },
-                  ].map((a) => (
-                    <div key={a.name} className="actuator-row" style={{ borderColor: t.border }}>
-                      <div>
-                        <div style={{ fontSize: 13 }}>{a.name}</div>
-                        <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: 0.4, marginTop: 2, color: a.on ? t.accent : t.muted }}>{a.on ? a.onTxt : a.offTxt}</div>
+                    { alvo: 'bomba' as const, name: 'Bomba de Irrigação', on: status.bomba, onTxt: 'ATIVA', offTxt: 'DESLIGADA' },
+                    { alvo: 'valvula' as const, name: 'Válvula de Gotejamento', on: status.valvula_aberta_pct > 0, onTxt: 'ABERTA', offTxt: 'FECHADA' },
+                    { alvo: 'ventilador' as const, name: 'Ventilador', on: status.ventilador, onTxt: 'LIGADO', offTxt: 'DESLIGADO' },
+                    { alvo: 'led' as const, name: 'LED (Fotoperíodo)', on: status.led, onTxt: 'LIGADO', offTxt: 'DESLIGADO' },
+                  ].map((a) => {
+                    const pend = pendente(a.alvo);
+                    const busy = enviando === a.alvo || !!pend;
+                    return (
+                      <div key={a.name} className="actuator-row" style={{ borderColor: t.border }}>
+                        <div>
+                          <div style={{ fontSize: 13 }}>{a.name}</div>
+                          <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: 0.4, marginTop: 2, color: pend ? t.amber : (a.on ? t.accent : t.muted) }}>
+                            {pend ? `Aguardando ESP32 (${pend.ligado ? 'ligar' : 'desligar'})…` : (a.on ? a.onTxt : a.offTxt)}
+                          </div>
+                        </div>
+                        <button
+                          className={`switch ${a.on ? 'on' : 'off'}`}
+                          style={{ background: a.on ? t.accent : t.border, opacity: busy ? 0.6 : 1, cursor: busy ? 'wait' : 'pointer', border: 'none' }}
+                          disabled={busy}
+                          onClick={() => acionar(a.alvo, a.on)}
+                        ><i /></button>
                       </div>
-                      <div className={`switch ${a.on ? 'on' : 'off'}`} style={{ background: a.on ? t.accent : t.border }}><i /></div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : <div className="empty">Nenhum status registrado ainda.</div>}
             </div>

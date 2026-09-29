@@ -40,3 +40,12 @@ export type Configuracao = {
   valor: number;
   descricao: string | null;
 };
+
+export type Comando = {
+  id: number;
+  criado_em: string;
+  alvo: 'bomba' | 'valvula' | 'ventilador' | 'led';
+  ligado: boolean;
+  executado: boolean;
+  executado_em: string | null;
+};

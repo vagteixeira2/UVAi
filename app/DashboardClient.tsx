@@ -71,6 +71,34 @@ export default function DashboardClient({ leitura, historico, status, alertas, c
   const [greeting, setGreeting] = useState('Bom dia');
   const [showAllAlerts, setShowAllAlerts] = useState(false);
   const [enviando, setEnviando] = useState<string | null>(null);
+  const [booted, setBooted] = useState(false);
+  const [bootMsg, setBootMsg] = useState('');
+
+  function iniciarSistema() {
+    const etapas = [
+      'Conectando ao Supabase…',
+      'Sincronizando sensores…',
+      'Verificando atuadores…',
+      'Sistema pronto.',
+    ];
+    let i = 0;
+    setBootMsg(etapas[0]);
+    const id = setInterval(() => {
+      i++;
+      if (i < etapas.length) {
+        setBootMsg(etapas[i]);
+      } else {
+        clearInterval(id);
+        setTimeout(() => setBooted(true), 450);
+      }
+    }, 550);
+  }
+
+  async function sair() {
+    await fetch('/api/logout', { method: 'POST' });
+    router.push('/login');
+    router.refresh();
+  }
 
   async function acionar(alvo: 'bomba' | 'valvula' | 'ventilador' | 'led', ligadoAtual: boolean) {
     setEnviando(alvo);
@@ -137,7 +165,38 @@ export default function DashboardClient({ leitura, historico, status, alertas, c
   return (
     <div style={{ ...vars, background: t.bg, color: t.text, minHeight: '100vh', transition: 'background-color 1s, color 1s' }}>
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', background: t.glow, transition: 'background 1s' }} />
-      <div className="uvai-root">
+
+      {!booted && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(5,10,8,0.55)', backdropFilter: 'blur(3px)',
+        }}>
+          <div style={{
+            width: '100%', maxWidth: 340, textAlign: 'center', padding: 32, borderRadius: 20,
+            border: `1px solid ${t.border}`, background: t.panel, backdropFilter: 'blur(16px)',
+          }}>
+            <div style={{
+              width: 44, height: 44, margin: '0 auto 16px', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'linear-gradient(145deg,#5FD98C,#A78CE0)', color: '#0A140E',
+              fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 20,
+            }}>U</div>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, marginBottom: 6 }}>Sistema em standby</div>
+            {bootMsg ? (
+              <div style={{ fontSize: 13, color: t.accent, minHeight: 20 }}>{bootMsg}</div>
+            ) : (
+              <>
+                <div style={{ fontSize: 12.5, color: t.muted, marginBottom: 18 }}>Clique para iniciar o painel da Estufa 01.</div>
+                <button onClick={iniciarSistema} style={{
+                  padding: '11px 22px', borderRadius: 10, border: 'none', background: t.accent,
+                  color: t.dark ? '#0A140E' : '#fff', fontWeight: 600, fontSize: 13.5, cursor: 'pointer',
+                }}>Iniciar Sistema</button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="uvai-root" style={{ filter: booted ? 'none' : 'blur(6px)', transition: 'filter .6s ease', pointerEvents: booted ? 'auto' : 'none' }}>
         <aside className="sidebar" style={{ background: t.panel, borderColor: t.border }}>
           <div>
             <div className="brand">
@@ -172,6 +231,7 @@ export default function DashboardClient({ leitura, historico, status, alertas, c
               </div>
             </div>
             <div style={{ marginTop: 14, fontSize: 10.5, color: t.muted, lineHeight: 1.6 }}>UVAÍ © 2026<br />Vinhedos Inteligentes</div>
+            <button onClick={sair} style={{ marginTop: 10, background: 'none', border: 'none', padding: 0, fontSize: 11, color: t.muted, cursor: 'pointer', textDecoration: 'underline' }}>Sair</button>
           </div>
         </aside>
 

@@ -74,6 +74,17 @@ requisição pode gravar uma leitura), o que é aceitável para o escopo do proj
 escolar. Se for além disso, vale trocar por uma chave compartilhada simples no
 header da requisição, validada dentro da rota `/api/leituras`.
 
+## Acesso ao dashboard
+
+O painel fica atrás de uma senha única compartilhada pela equipe, definida na
+variável `APP_PASSWORD`. Não é um sistema de contas — é só uma trava simples
+via cookie, suficiente pro escopo do projeto. As rotas que o ESP32 usa
+(`/api/leituras`, `/api/comandos`, `/api/comandos/confirmar`) ficam de fora
+da trava de propósito, já que o hardware não tem como fazer login.
+
+Ao entrar, o dashboard aparece em "standby" — o botão **Iniciar Sistema** só
+dispara uma animação de apresentação (não liga nada de verdade no banco).
+
 ## Deploy
 
 Recomendado: [Vercel](https://vercel.com) — importe este repositório e configure

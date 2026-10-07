@@ -175,11 +175,7 @@ export default function DashboardClient({ leitura, historico, status, alertas, c
             width: '100%', maxWidth: 340, textAlign: 'center', padding: 32, borderRadius: 20,
             border: `1px solid ${t.border}`, background: t.panel, backdropFilter: 'blur(16px)',
           }}>
-            <div style={{
-              width: 44, height: 44, margin: '0 auto 16px', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'linear-gradient(145deg,#5FD98C,#A78CE0)', color: '#0A140E',
-              fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 20,
-            }}>U</div>
+            <img src="/brand/icon.png" alt="Uvaí" style={{ width: 48, height: 48, objectFit: 'contain', margin: '0 auto 16px', display: 'block' }} />
             <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, marginBottom: 6 }}>Sistema em standby</div>
             {bootMsg ? (
               <div style={{ fontSize: 13, color: t.accent, minHeight: 20 }}>{bootMsg}</div>
@@ -200,11 +196,7 @@ export default function DashboardClient({ leitura, historico, status, alertas, c
         <aside className="sidebar" style={{ background: t.panel, borderColor: t.border }}>
           <div>
             <div className="brand">
-              <svg width="34" height="27" viewBox="0 0 70 56" fill="none">
-                <path d="M35 50C22 46 10 36 8 18c12 2 22 12 27 32Z" stroke={t.text} strokeWidth="1.4" opacity=".85" />
-                <path d="M35 50c13-4 25-14 27-32-12 2-22 12-27 32Z" stroke={t.text} strokeWidth="1.4" opacity=".85" />
-                <path d="M35 4c4 6 5 10 0 16-5-6-4-10 0-16Z" fill={t.purple} />
-              </svg>
+              <img src="/brand/icon.png" alt="Uvaí" style={{ width: 34, height: 34, objectFit: 'contain' }} />
               <div>
                 <div className="brand-name">UVAÍ</div>
                 <div className="brand-sub">TECNOLOGIA PARA VINHEDOS</div>

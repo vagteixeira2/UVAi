@@ -29,30 +29,30 @@ export default function LoginPage() {
 
   return (
     <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'radial-gradient(900px 500px at 15% -10%, rgba(95,217,140,0.12), transparent 60%), radial-gradient(700px 500px at 100% 0%, rgba(167,140,224,0.10), transparent 55%), #070C09',
-      fontFamily: "'IBM Plex Sans', sans-serif", color: '#EAF2EC', padding: 20,
+      minHeight: '100vh', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontFamily: "'IBM Plex Sans', sans-serif", color: '#fff', padding: 20, overflow: 'hidden',
     }}>
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet" />
 
+      <img src="/brand/capa.png" alt="" style={{
+        position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0,
+      }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(3,8,6,0.45)', zIndex: 1 }} />
+
       <form onSubmit={entrar} style={{
-        width: '100%', maxWidth: 360, border: '1px solid rgba(232,244,236,0.12)', borderRadius: 20,
-        background: 'rgba(232,244,236,0.045)', backdropFilter: 'blur(16px)', padding: 32,
+        position: 'relative', zIndex: 2, width: '100%', maxWidth: 360, border: '1px solid rgba(255,255,255,0.16)',
+        borderRadius: 20, background: 'rgba(10,20,15,0.45)', backdropFilter: 'blur(18px)', padding: 32,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'linear-gradient(145deg,#5FD98C,#A78CE0)', color: '#0A140E',
-            fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 18,
-          }}>U</div>
-          <div>
-            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, letterSpacing: 2 }}>UVAÍ</div>
-            <div style={{ fontSize: 9, letterSpacing: 1, color: '#93A69B' }}>TECNOLOGIA PARA VINHEDOS</div>
-          </div>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 18 }}>
+          <img src="/brand/icon.png" alt="Uvaí" style={{ width: 56, height: 'auto' }} />
+        </div>
+        <div style={{ textAlign: 'center', fontFamily: "'Fraunces', serif", fontSize: 20, letterSpacing: 3, marginBottom: 2 }}>UVAÍ</div>
+        <div style={{ textAlign: 'center', fontSize: 9, letterSpacing: 1.5, color: 'rgba(255,255,255,0.6)', marginBottom: 22 }}>
+          TECNOLOGIA PARA VINHEDOS INTELIGENTES
         </div>
 
-        <div style={{ fontSize: 13.5, color: '#93A69B', marginBottom: 18 }}>
+        <div style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.7)', marginBottom: 18, textAlign: 'center' }}>
           Acesso da equipe — digite a senha compartilhada pra entrar no painel.
         </div>
 
@@ -64,12 +64,12 @@ export default function LoginPage() {
           autoFocus
           style={{
             width: '100%', padding: '11px 14px', borderRadius: 10, marginBottom: 14,
-            border: '1px solid rgba(232,244,236,0.18)', background: 'rgba(0,0,0,0.2)',
-            color: '#EAF2EC', fontSize: 14, outline: 'none',
+            border: '1px solid rgba(255,255,255,0.22)', background: 'rgba(0,0,0,0.25)',
+            color: '#fff', fontSize: 14, outline: 'none',
           }}
         />
 
-        {erro && <div style={{ color: '#F0687E', fontSize: 12.5, marginBottom: 14 }}>{erro}</div>}
+        {erro && <div style={{ color: '#F0A0AC', fontSize: 12.5, marginBottom: 14, textAlign: 'center' }}>{erro}</div>}
 
         <button
           type="submit"
@@ -82,6 +82,10 @@ export default function LoginPage() {
         >
           {enviando ? 'Entrando…' : 'Entrar'}
         </button>
+
+        <div style={{ textAlign: 'center', fontSize: 10, color: 'rgba(255,255,255,0.45)', marginTop: 18, letterSpacing: 1 }}>
+          MAIS PRECISÃO. MELHORES COLHEITAS.
+        </div>
       </form>
     </div>
   );

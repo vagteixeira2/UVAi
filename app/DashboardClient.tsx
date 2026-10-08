@@ -4,9 +4,9 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Home, Warehouse, Radio, Settings, LineChartIcon, SlidersHorizontal, ChevronRight,
   Thermometer, Droplet, Sun, Container, Cylinder, Wind, Bell, Zap, ArrowUp, ArrowDown, ArrowRight,
-  Leaf, Sprout, Flower2, Grape, Database, Clock, Cpu, Wifi, BatteryMedium,
+  Leaf, Sprout, Flower2, Grape, Database, Clock, Cpu, Wifi, BatteryMedium, Target, CircleCheck, TriangleAlert,
 } from 'lucide-react';
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
+import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, ReferenceLine } from 'recharts';
 import { Leitura, StatusAtual, Alerta, Configuracao, Comando } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { THEMES, getPeriod, greetingFor, regionMinutes, TZ, ThemeKey } from '@/lib/timeTheme';
@@ -74,6 +74,7 @@ export default function DashboardClient({ leitura, historico, status, alertas, c
   const [enviando, setEnviando] = useState<string | null>(null);
   const [booted, setBooted] = useState(false);
   const [bootMsg, setBootMsg] = useState('');
+  const [aba, setAba] = useState<'geral' | 'energia'>('geral');
 
   function iniciarSistema() {
     const etapas = [
@@ -155,13 +156,83 @@ export default function DashboardClient({ leitura, historico, status, alertas, c
   const spVento = useMemo(() => series(historico, 'velocidade_vento'), [historico]);
 
   const NAV = [
-    { label: 'Visão Geral', Icon: Home },
+    { label: 'Visão Geral', Icon: Home, id: 'geral' as const },
     { label: 'Estufa', Icon: Warehouse },
     { label: 'Sensores', Icon: Radio },
     { label: 'Atuadores', Icon: Settings },
+    { label: 'Potencial Energético', Icon: Zap, id: 'energia' as const },
     { label: 'Histórico', Icon: LineChartIcon },
     { label: 'Configurações', Icon: SlidersHorizontal },
   ];
+
+
+  const POTENCIA_IDEAL_W = 50;
+  const ENERGIA_META_WH = 320;
+  const potenciaHoje = [
+    { h: '06h', w: 3.1 }, { h: '07h', w: 9.8 }, { h: '08h', w: 18.4 }, { h: '09h', w: 27.9 },
+    { h: '10h', w: 36.2 }, { h: '11h', w: 44.5 }, { h: '12h', w: 48.1 }, { h: '13h', w: 46.3 }, { h: '14h', w: 42.7 },
+  ];
+  const energiaSemana = [
+    { d: 'Qui', wh: 334 }, { d: 'Sex', wh: 298 }, { d: 'Sáb', wh: 341 }, { d: 'Dom', wh: 352 },
+    { d: 'Seg', wh: 247 }, { d: 'Ter', wh: 318 }, { d: 'Qua', wh: 337 },
+  ];
+  const POTENCIA_PLACA_W = potenciaHoje[potenciaHoje.length - 1].w;
+  const pctIdeal = Math.round((POTENCIA_PLACA_W / POTENCIA_IDEAL_W) * 100);
+  const potenciaBoa = pctIdeal >= 80;
+  const corStatus = potenciaBoa ? t.accent : t.amber;
+  // Rótulo da linha de referência: fica acima da linha, no canto direito, com fundo para não ser coberto
+  const rotuloReferencia = (texto: string) => ({ viewBox }: any) => {
+    const largura = texto.length * 6.4 + 12;
+    const x = viewBox.x + viewBox.width - largura - 2;
+    const y = viewBox.y - 22;
+    return (
+      <g>
+        <rect x={x} y={y} width={largura} height={18} rx={5} fill={t.panel} stroke={t.blue} strokeOpacity={0.5} />
+        <text x={x + largura / 2} y={y + 12.5} textAnchor="middle" fontSize={11} fontWeight={600} fill={t.blue}>{texto}</text>
+      </g>
+    );
+  };
+  const tooltipStyle = { background: t.panel, border: `1px solid ${t.border}`, borderRadius: 10, fontSize: 12, color: t.text };
+
+  // Consumo mockado (W por hora) — painel exibido na Visão Geral e na aba Potencial Energético
+  const consumoHoras = [60,52,58,64,72,80,76,88,95,84,90,78,70,66,74,62,68,58,64,55]
+    .map((w, i) => ({ h: `${String(i + 4).padStart(2, '0')}h`, w }));
+  const consumoAtual = consumoHoras[consumoHoras.length - 1].w;
+  const consumoPico = consumoHoras.reduce((m, p) => (p.w > m.w ? p : m));
+  const consumoMedia = Math.round(consumoHoras.reduce((s, p) => s + p.w, 0) / consumoHoras.length);
+  const consumoTotalWh = consumoHoras.reduce((s, p) => s + p.w, 0);
+
+  const painelConsumo = (altura: number) => (
+    <div className="panel" style={{ background: t.panel, borderColor: t.border }}>
+      <h2 className="panel-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Zap size={15} style={{ color: t.accent }} /> Consumo de Energia (W)</h2>
+      <div className="consumo-stats">
+        {[
+          { label: 'Agora', value: `${consumoAtual} W` },
+          { label: 'Média', value: `${consumoMedia} W` },
+          { label: `Pico (${consumoPico.h})`, value: `${consumoPico.w} W` },
+          { label: 'Total no período', value: `${(consumoTotalWh / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} kWh` },
+        ].map((st) => (
+          <div key={st.label}>
+            <div style={{ fontSize: 10.5, color: t.muted }}>{st.label}</div>
+            <div style={{ fontSize: 14, fontWeight: 600, marginTop: 2 }}>{st.value}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ height: altura }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={consumoHoras} margin={{ top: 8, right: 8, left: -22, bottom: 0 }}>
+            <defs><linearGradient id="egrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={t.accent} stopOpacity={0.35}/><stop offset="100%" stopColor={t.accent} stopOpacity={0}/></linearGradient></defs>
+            <CartesianGrid stroke={t.grid} vertical={false} />
+            <XAxis dataKey="h" tick={{ fontSize: 10.5, fill: t.muted }} axisLine={false} tickLine={false} interval="preserveStartEnd" minTickGap={18} />
+            <YAxis domain={[0, 120]} ticks={[0, 40, 80, 120]} tick={{ fontSize: 10.5, fill: t.muted }} axisLine={false} tickLine={false} />
+            <Tooltip contentStyle={tooltipStyle} cursor={{ stroke: t.muted, strokeDasharray: '3 3' }} formatter={(v: number) => [`${v} W`, 'Consumo']} />
+            <Area type="monotone" dataKey="w" stroke={t.accent} strokeWidth={2} fill="url(#egrad)" activeDot={{ r: 4 }} isAnimationActive={false} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+      <div style={{ fontSize: 10.5, color: t.muted, marginTop: 6 }}>Estimativa ilustrativa — sensor de potência ainda não integrado</div>
+    </div>
+  );
 
   return (
     <div style={{ ...vars, background: t.bg, color: t.text, minHeight: '100vh', transition: 'background-color 1s, color 1s' }}>
@@ -204,11 +275,14 @@ export default function DashboardClient({ leitura, historico, status, alertas, c
               </div>
             </div>
             <nav className="side-nav">
-              {NAV.map(({ label, Icon }, i) => (
-                <a key={label} style={i === 0 ? { background: t.accentSoft, color: t.text, borderColor: t.border } : { color: t.muted }}>
-                  <Icon size={17} strokeWidth={1.6} style={i === 0 ? { color: t.accent } : undefined} /> {label}
-                </a>
-              ))}
+              {NAV.map(({ label, Icon, id }) => {
+                const ativo = id === aba;
+                return (
+                  <a key={label} onClick={id ? () => setAba(id) : undefined} style={ativo ? { background: t.accentSoft, color: t.text, borderColor: t.border } : { color: t.muted }}>
+                    <Icon size={17} strokeWidth={1.6} style={ativo ? { color: t.accent } : undefined} /> {label}
+                  </a>
+                );
+              })}
             </nav>
           </div>
           <div>
@@ -247,6 +321,94 @@ export default function DashboardClient({ leitura, historico, status, alertas, c
             </div>
           </header>
 
+          {aba === 'energia' ? (<>
+            <section className="panel" style={{ background: t.panel, borderColor: t.border, marginBottom: 16 }}>
+              <h2 className="panel-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Zap size={15} style={{ color: t.accent }} /> Potencial Energético</h2>
+              <div className="metric-grid">
+                <div className="metric-card">
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                    <div className="metric-icon" style={{ color: t.amber, background: `${t.amber}18`, borderColor: `${t.amber}33` }}>
+                      <Sun size={18} strokeWidth={1.6} />
+                    </div>
+                    <div style={{ fontSize: 12.5, paddingTop: 2 }}>Potência atual da placa</div>
+                  </div>
+                  <div style={{ marginTop: 10, fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 500 }}>
+                    {POTENCIA_PLACA_W.toLocaleString('pt-BR')}<span style={{ fontSize: 13, fontWeight: 400, marginLeft: 3, color: 'var(--muted)' }}>W</span>
+                  </div>
+                  <div style={{ marginTop: 4, fontSize: 10.5, color: 'var(--muted)', textAlign: 'right' }}>{pctIdeal}% do ideal</div>
+                </div>
+
+                <div className="metric-card">
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                    <div className="metric-icon" style={{ color: t.blue, background: `${t.blue}18`, borderColor: `${t.blue}33` }}>
+                      <Target size={18} strokeWidth={1.6} />
+                    </div>
+                    <div style={{ fontSize: 12.5, paddingTop: 2 }}>Potência ideal</div>
+                  </div>
+                  <div style={{ marginTop: 10, fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 500 }}>
+                    {POTENCIA_IDEAL_W}<span style={{ fontSize: 13, fontWeight: 400, marginLeft: 3, color: 'var(--muted)' }}>W</span>
+                  </div>
+                  <div style={{ marginTop: 4, fontSize: 10.5, color: 'var(--muted)', textAlign: 'right' }}>Meta diária: {ENERGIA_META_WH} Wh</div>
+                </div>
+
+                <div className="metric-card" style={{ borderColor: `${corStatus}55` }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                    <div className="metric-icon" style={{ color: corStatus, background: `${corStatus}18`, borderColor: `${corStatus}33` }}>
+                      {potenciaBoa ? <CircleCheck size={18} strokeWidth={1.6} /> : <TriangleAlert size={18} strokeWidth={1.6} />}
+                    </div>
+                    <div style={{ fontSize: 12.5, paddingTop: 2 }}>Status da potência</div>
+                  </div>
+                  <div style={{ marginTop: 10, fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 500 }}>
+                    {potenciaBoa ? 'Bom' : 'Precisa de atenção'}
+                  </div>
+                  <div style={{ marginTop: 4, fontSize: 11, color: 'var(--muted)', lineHeight: 1.45 }}>
+                    {potenciaBoa
+                      ? 'A placa está gerando dentro do esperado.'
+                      : 'Geração abaixo de 80% do ideal. Verifique sujeira, sombra ou conexões da placa.'}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="row-energia">
+              <div className="panel" style={{ background: t.panel, borderColor: t.border }}>
+                <h2 className="panel-title">Potência ao longo do dia (W)</h2>
+                <div style={{ height: 220 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={potenciaHoje} margin={{ top: 10, right: 12, left: -18, bottom: 0 }}>
+                      <defs><linearGradient id="pgrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={t.accent} stopOpacity={0.3}/><stop offset="100%" stopColor={t.accent} stopOpacity={0}/></linearGradient></defs>
+                      <CartesianGrid stroke={t.grid} vertical={false} />
+                      <XAxis dataKey="h" tick={{ fontSize: 11, fill: t.muted }} axisLine={false} tickLine={false} />
+                      <YAxis domain={[0, 70]} ticks={[0, 20, 40, 60]} tick={{ fontSize: 11, fill: t.muted }} axisLine={false} tickLine={false} />
+                      <Tooltip contentStyle={tooltipStyle} cursor={{ stroke: t.muted, strokeDasharray: '3 3' }} formatter={(v: number) => [`${v.toLocaleString('pt-BR')} W`, 'Potência']} />
+                      <Area type="monotone" dataKey="w" stroke={t.accent} strokeWidth={2} fill="url(#pgrad)" dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
+                      <ReferenceLine y={POTENCIA_IDEAL_W} stroke={t.blue} strokeWidth={1.5} strokeDasharray="5 4" label={rotuloReferencia(`Ideal ${POTENCIA_IDEAL_W} W`)} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="panel" style={{ background: t.panel, borderColor: t.border }}>
+                <h2 className="panel-title">Energia gerada — últimos 7 dias (Wh)</h2>
+                <div style={{ height: 220 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={energiaSemana} margin={{ top: 10, right: 12, left: -12, bottom: 0 }}>
+                      <CartesianGrid stroke={t.grid} vertical={false} />
+                      <XAxis dataKey="d" tick={{ fontSize: 11, fill: t.muted }} axisLine={false} tickLine={false} />
+                      <YAxis domain={[0, 450]} ticks={[0, 100, 200, 300, 400]} tick={{ fontSize: 11, fill: t.muted }} axisLine={false} tickLine={false} />
+                      <Tooltip contentStyle={tooltipStyle} cursor={{ fill: t.accentSoft }} formatter={(v: number) => [`${v} Wh`, 'Energia']} />
+                      <Bar dataKey="wh" fill={t.accent} radius={[4, 4, 0, 0]} maxBarSize={28} isAnimationActive={false} />
+                      <ReferenceLine y={ENERGIA_META_WH} stroke={t.blue} strokeWidth={1.5} strokeDasharray="5 4" label={rotuloReferencia(`Meta ${ENERGIA_META_WH} Wh`)} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </section>
+
+            <section style={{ marginTop: 16 }}>
+              {painelConsumo(240)}
+            </section>
+          </>) : (<>
           {bannerAlert && (
             <div className="banner" style={{ borderColor: t.border, background: t.card, borderLeftColor: bannerAlert.nivel === 'crit' ? '#f0687e' : t.amber }}>
               <span style={{ width: 8, height: 8, borderRadius: 99, marginTop: 5, background: bannerAlert.nivel === 'crit' ? '#f0687e' : t.amber, flexShrink: 0 }} />
@@ -321,20 +483,7 @@ export default function DashboardClient({ leitura, historico, status, alertas, c
               ) : <div className="empty">Nenhum status registrado ainda.</div>}
             </div>
 
-            <div className="panel" style={{ background: t.panel, borderColor: t.border }}>
-              <h2 className="panel-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Zap size={15} style={{ color: t.accent }} /> Consumo de Energia</h2>
-              <div style={{ fontSize: 10.5, color: t.muted, marginBottom: 4 }}>Estimativa ilustrativa — sensor de potência ainda não integrado</div>
-              <div style={{ height: 90 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={[60,52,58,64,72,80,76,88,95,84,90,78,70,66,74,62,68,58,64,55].map((w,i)=>({h:i,w}))}>
-                    <defs><linearGradient id="egrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={t.accent} stopOpacity={0.35}/><stop offset="100%" stopColor={t.accent} stopOpacity={0}/></linearGradient></defs>
-                    <CartesianGrid stroke={t.grid} vertical={false} />
-                    <YAxis hide domain={[0,120]} />
-                    <Area type="monotone" dataKey="w" stroke={t.accent} strokeWidth={1.6} fill="url(#egrad)" isAnimationActive={false} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
+            {painelConsumo(120)}
 
             <div className="panel" style={{ background: t.panel, borderColor: t.border }}>
               <h2 className="panel-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Bell size={15} /> Alertas e Eventos <span style={{ marginLeft: 'auto', fontSize: 11, color: t.muted, fontWeight: 400 }}>{alertas.length} ativos</span></h2>
@@ -393,6 +542,7 @@ export default function DashboardClient({ leitura, historico, status, alertas, c
               ))}
             </div>
           </section>
+          </>)}
 
           <footer style={{ textAlign: 'center', marginTop: 26, fontSize: 11, color: t.muted }}>
             Uvaí · Estufa inteligente para vinícola — Projeto PEITD, BTI/IMD/UFRN

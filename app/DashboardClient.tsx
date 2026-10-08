@@ -241,11 +241,6 @@ export default function DashboardClient({ leitura, historico, status, alertas, c
                 <span style={{ width: 7, height: 7, borderRadius: 99, background: leitura ? t.accent : t.muted }} />
                 {leitura ? 'Sistema Online' : 'Sem dados ainda'}
               </span>
-              {demo && (
-                <span title="Valores sem sensor real são simulados" style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: 0.4, padding: '3px 9px', borderRadius: 99, border: `1px solid ${t.amber}`, color: t.amber }}>
-                  DEMONSTRAÇÃO
-                </span>
-              )}
               <span style={{ color: t.muted }}>{clock}</span>
               <div style={{ position: 'relative' }}><Bell size={16} style={{ color: t.muted }} /></div>
               <div style={{ width: 32, height: 32, borderRadius: 99, display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 600, border: `1px solid ${t.border}`, background: t.card }}>UV</div>

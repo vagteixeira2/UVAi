@@ -74,6 +74,19 @@ requisição pode gravar uma leitura), o que é aceitável para o escopo do proj
 escolar. Se for além disso, vale trocar por uma chave compartilhada simples no
 header da requisição, validada dentro da rota `/api/leituras`.
 
+## Vários ESP32 (um por módulo)
+
+Cada módulo da estufa pode ter o seu ESP32, todos com o **mesmo firmware**
+(`firmware/uvai-esp32-modulo/uvai-esp32-modulo.ino`) — só muda a linha de `PERFIL`
+descomentada no topo (`BOMBA`, `VALVULA`, `CLIMA` ou `LUZ`).
+
+- **Leituras:** cada placa envia só os campos que ela lê (ex.: `{ "umidade_solo": 52 }`).
+  O servidor completa o resto com a última leitura salva, então o painel sempre
+  vê uma linha completa.
+- **Comandos:** cada placa pergunta só pelos seus atuadores:
+  `GET /api/comandos?alvos=bomba` (ou `?alvos=valvula,led`). Sem o parâmetro,
+  devolve todos os pendentes, como antes.
+
 ## Acesso ao dashboard
 
 O painel fica atrás de uma senha única compartilhada pela equipe, definida na

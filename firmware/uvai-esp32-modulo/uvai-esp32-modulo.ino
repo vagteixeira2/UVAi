@@ -28,10 +28,11 @@ const char* WIFI_PASSWORD = "iot@imd#";
 const char* BASE_URL      = "https://uvai-one.vercel.app";
 
 // ============ 2) PERFIL: descomente SÓ UMA ============
-#define PERFIL_BOMBA
+//#define PERFIL_BOMBA
 //#define PERFIL_VALVULA
 //#define PERFIL_CLIMA
 //#define PERFIL_LUZ
+#define PERFIL_PORTA
 
 // ============ ESTRUTURAS ============
 // alvo = nome que o painel usa: bomba | valvula | ventilador | led
@@ -40,11 +41,18 @@ struct Rele   { const char* alvo; int pino; bool ativoAlto; };
 struct Sensor { const char* campo; int pino; int brutoMin; int brutoMax; };
 
 #define USA_SERVO 0
-const char* SERVO_ALVO = "valvula";
 const int SERVO_PIN = 18;
-// CALIBRE no teste de bancada: ângulo com a mangueira livre (aberta) e pinçada (fechada)
-const int ANGULO_LIGADO    = 0;
-const int ANGULO_DESLIGADO = 90;
+#if defined(PERFIL_PORTA)
+  // Porta: "ligado" = aberta. Ângulos do código original da porta.
+  const char* SERVO_ALVO = "porta";
+  const int ANGULO_LIGADO    = 95;
+  const int ANGULO_DESLIGADO = 0;
+#else
+  // Válvula: CALIBRE no teste de bancada (mangueira livre = aberta, pinçada = fechada)
+  const char* SERVO_ALVO = "valvula";
+  const int ANGULO_LIGADO    = 0;
+  const int ANGULO_DESLIGADO = 90;
+#endif
 
 // ============ PERFIS (ajuste os pinos aqui) ============
 #if defined(PERFIL_BOMBA)
@@ -61,6 +69,13 @@ const int ANGULO_DESLIGADO = 90;
   // Umidade do solo: seco ~3200, molhado ~1400 (CALIBRE com o seu sensor)
   Sensor sensores[] = { {"umidade_solo", 32, 3200, 1400} };
 
+#elif defined(PERFIL_PORTA)
+  // Porta remota: servo no GPIO18 (alimente o servo com fonte externa de 5 V, GND em comum)
+  #undef USA_SERVO
+  #define USA_SERVO 1
+  Rele   reles[1];
+  Sensor sensores[1];
+
 #elif defined(PERFIL_CLIMA)
   Rele   reles[]    = { {"ventilador", 25, true} };
   Sensor sensores[1];   // TODO: temperatura / umidade_ar (DHT22 ou DS18B20)
@@ -73,7 +88,10 @@ const int ANGULO_DESLIGADO = 90;
   #error "Descomente um PERFIL no topo do arquivo"
 #endif
 
-#if defined(PERFIL_VALVULA)
+#if defined(PERFIL_PORTA)
+  const int N_RELES = 0;
+  const int N_SENSORES = 0;
+#elif defined(PERFIL_VALVULA)
   const int N_RELES = 0;
   const int N_SENSORES = sizeof(sensores) / sizeof(sensores[0]);
 #elif defined(PERFIL_CLIMA)

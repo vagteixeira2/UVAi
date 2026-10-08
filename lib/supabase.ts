@@ -24,6 +24,7 @@ export type StatusAtual = {
   valvula_aberta_pct: number;
   ventilador: boolean;
   led: boolean;
+  porta?: boolean;
 };
 
 export type Alerta = {
@@ -44,7 +45,7 @@ export type Configuracao = {
 export type Comando = {
   id: number;
   criado_em: string;
-  alvo: 'bomba' | 'valvula' | 'ventilador' | 'led';
+  alvo: 'bomba' | 'valvula' | 'ventilador' | 'led' | 'porta';
   ligado: boolean;
   executado: boolean;
   executado_em: string | null;

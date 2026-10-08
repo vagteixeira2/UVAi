@@ -24,17 +24,20 @@ export async function POST(req: NextRequest) {
     .limit(1)
     .single();
 
-  const novo = {
+  const novo: Record<string, boolean | number> = {
     bomba: atual?.bomba ?? false,
     valvula_aberta_pct: atual?.valvula_aberta_pct ?? 0,
     ventilador: atual?.ventilador ?? false,
     led: atual?.led ?? false,
   };
+  // A coluna "porta" só existe depois de rodar supabase/porta.sql
+  if (alvo === 'porta' || (atual && 'porta' in atual)) novo.porta = atual?.porta ?? false;
 
   if (alvo === 'bomba') novo.bomba = ligado;
   if (alvo === 'valvula') novo.valvula_aberta_pct = ligado ? 100 : 0;
   if (alvo === 'ventilador') novo.ventilador = ligado;
   if (alvo === 'led') novo.led = ligado;
+  if (alvo === 'porta') novo.porta = ligado;
 
   const { error: insErr } = await supabase.from('status_atual').insert(novo);
   if (insErr) return NextResponse.json({ ok: false, error: insErr.message }, { status: 500 });

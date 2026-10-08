@@ -92,9 +92,11 @@ descomentada no topo (`BOMBA`, `VALVULA`, `CLIMA`, `LUZ` ou `PORTA`).
 - **Porta:** rode `supabase/porta.sql` no SQL Editor do Supabase (cria a coluna `porta` e
   libera o alvo `porta` nos comandos). O painel ganha o botão "Porta da Estufa" e a placa
   com `PERFIL_PORTA` (servo no GPIO18) executa abrir/fechar.
-- **Modo demonstração:** com `MODO_DEMO=true` na Vercel, sensores sem dado real recebem
-  valores simulados plausíveis e o painel mostra o selo "DEMONSTRAÇÃO". Dado real enviado
-  por um ESP32 sempre tem prioridade. Desligue (`false`) quando tudo for real.
+- **Modo demonstração** (`MODO_DEMO` na Vercel; o painel mostra o selo "DEMONSTRAÇÃO"):
+  - `true`: sensores sem dado real recebem valores simulados; dado real do ESP32 sempre vence.
+  - `total`: tudo simulado, sem depender de placa (para apresentações).
+  - `false`: desligado, dados 100% reais.
+  Os valores seguem o horário de Natal e o padrão de uma estufa de uvas controlada (ver `lib/demo.ts`).
 
 ## Acesso ao dashboard
 

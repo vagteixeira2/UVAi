@@ -19,5 +19,7 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!login|api|greenhouse|_next/static|_next/image|favicon.ico).*)'],
+  // brand/ e icon.png precisam ficar livres: a tela de login carrega essas imagens
+  // ANTES do usuário ter o cookie. Qualquer arquivo com extensão de imagem/fonte também.
+  matcher: ['/((?!login|api|greenhouse|brand|_next/static|_next/image|favicon.ico|icon.png|.*\\.(?:png|jpg|jpeg|webp|svg|ico|woff2?)$).*)'],
 };

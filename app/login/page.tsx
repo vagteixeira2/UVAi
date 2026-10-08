@@ -31,11 +31,12 @@ export default function LoginPage() {
     <div style={{
       minHeight: '100vh', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontFamily: "'IBM Plex Sans', sans-serif", color: '#fff', padding: 20, overflow: 'hidden',
+      background: '#0A140E', // cor de fundo enquanto a imagem carrega
     }}>
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet" />
 
-      <img src="/brand/capa.png" alt="" style={{
+      <img src="/brand/capa.jpg" alt="" style={{
         position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0,
       }} />
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(3,8,6,0.45)', zIndex: 1 }} />

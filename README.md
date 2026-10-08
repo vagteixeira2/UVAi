@@ -74,6 +74,28 @@ requisição pode gravar uma leitura), o que é aceitável para o escopo do proj
 escolar. Se for além disso, vale trocar por uma chave compartilhada simples no
 header da requisição, validada dentro da rota `/api/leituras`.
 
+## Vários ESP32 (um por módulo)
+
+Cada módulo da estufa pode ter o seu ESP32, todos com o **mesmo firmware**
+(`firmware/uvai-esp32-modulo/uvai-esp32-modulo.ino`) — só muda a linha de `PERFIL`
+descomentada no topo (`BOMBA`, `VALVULA`, `CLIMA`, `LUZ` ou `PORTA`).
+
+- **Leituras:** cada placa envia só os campos que ela lê (ex.: `{ "umidade_solo": 52 }`).
+  O servidor completa o resto com a última leitura salva, então o painel sempre
+  vê uma linha completa.
+- **Comandos:** cada placa pergunta só pelos seus atuadores:
+  `GET /api/comandos?alvos=bomba` (ou `?alvos=valvula,led`). Sem o parâmetro,
+  devolve todos os pendentes, como antes.
+
+## Porta e modo demonstração
+
+- **Porta:** rode `supabase/porta.sql` no SQL Editor do Supabase (cria a coluna `porta` e
+  libera o alvo `porta` nos comandos). O painel ganha o botão "Porta da Estufa" e a placa
+  com `PERFIL_PORTA` (servo no GPIO18) executa abrir/fechar.
+- **Modo demonstração:** com `MODO_DEMO=true` na Vercel, sensores sem dado real recebem
+  valores simulados plausíveis e o painel mostra o selo "DEMONSTRAÇÃO". Dado real enviado
+  por um ESP32 sempre tem prioridade. Desligue (`false`) quando tudo for real.
+
 ## Acesso ao dashboard
 
 O painel fica atrás de uma senha única compartilhada pela equipe, definida na

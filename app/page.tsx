@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import DashboardClient from './DashboardClient';
+import { aplicarDemo } from '@/lib/demo';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +13,9 @@ export default async function Page() {
     supabase.from('comandos').select('*').eq('executado', false).order('criado_em', { ascending: false }),
   ]);
 
-  const ordenado = (historico ?? []).slice().reverse(); // mais antigo -> mais recente, para os sparklines
+  const demo = process.env.MODO_DEMO === 'true';
+  const bruto = (historico ?? []).slice().reverse(); // mais antigo -> mais recente, para os sparklines
+  const ordenado = demo ? aplicarDemo(bruto) : bruto;
 
   return (
     <DashboardClient
@@ -22,6 +25,7 @@ export default async function Page() {
       alertas={a ?? []}
       config={c ?? []}
       comandosPendentes={pend ?? []}
+      demo={demo}
     />
   );
 }

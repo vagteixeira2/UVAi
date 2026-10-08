@@ -18,6 +18,7 @@ type Props = {
   alertas: Alerta[];
   config: Configuracao[];
   comandosPendentes: Comando[];
+  demo?: boolean;
 };
 
 function fmt(v: number | null | undefined, unit: string) {
@@ -64,7 +65,7 @@ function MetricCard({ icon: Icon, label, value, unit, footer, color, spark }: {
   );
 }
 
-export default function DashboardClient({ leitura, historico, status, alertas, config, comandosPendentes }: Props) {
+export default function DashboardClient({ leitura, historico, status, alertas, config, comandosPendentes, demo }: Props) {
   const router = useRouter();
   const [periodKey, setPeriodKey] = useState<ThemeKey>('tarde');
   const [clock, setClock] = useState('');
@@ -100,7 +101,7 @@ export default function DashboardClient({ leitura, historico, status, alertas, c
     router.refresh();
   }
 
-  async function acionar(alvo: 'bomba' | 'valvula' | 'ventilador' | 'led', ligadoAtual: boolean) {
+  async function acionar(alvo: 'bomba' | 'valvula' | 'ventilador' | 'led' | 'porta', ligadoAtual: boolean) {
     setEnviando(alvo);
     try {
       await fetch('/api/comandos', {
@@ -240,6 +241,11 @@ export default function DashboardClient({ leitura, historico, status, alertas, c
                 <span style={{ width: 7, height: 7, borderRadius: 99, background: leitura ? t.accent : t.muted }} />
                 {leitura ? 'Sistema Online' : 'Sem dados ainda'}
               </span>
+              {demo && (
+                <span title="Valores sem sensor real são simulados" style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: 0.4, padding: '3px 9px', borderRadius: 99, border: `1px solid ${t.amber}`, color: t.amber }}>
+                  DEMONSTRAÇÃO
+                </span>
+              )}
               <span style={{ color: t.muted }}>{clock}</span>
               <div style={{ position: 'relative' }}><Bell size={16} style={{ color: t.muted }} /></div>
               <div style={{ width: 32, height: 32, borderRadius: 99, display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 600, border: `1px solid ${t.border}`, background: t.card }}>UV</div>
@@ -295,6 +301,7 @@ export default function DashboardClient({ leitura, historico, status, alertas, c
                     { alvo: 'valvula' as const, name: 'Válvula de Gotejamento', on: status.valvula_aberta_pct > 0, onTxt: 'ABERTA', offTxt: 'FECHADA' },
                     { alvo: 'ventilador' as const, name: 'Ventilador', on: status.ventilador, onTxt: 'LIGADO', offTxt: 'DESLIGADO' },
                     { alvo: 'led' as const, name: 'LED (Fotoperíodo)', on: status.led, onTxt: 'LIGADO', offTxt: 'DESLIGADO' },
+                    { alvo: 'porta' as const, name: 'Porta da Estufa', on: !!status.porta, onTxt: 'ABERTA', offTxt: 'FECHADA' },
                   ].map((a) => {
                     const pend = pendente(a.alvo);
                     const busy = enviando === a.alvo || !!pend;
